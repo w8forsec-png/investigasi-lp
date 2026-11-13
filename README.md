@@ -38,6 +38,10 @@ npm start
 
 Di Vercel, impor repository, tambahkan tiga variabel Supabase di atas pada Project Settings → Environment Variables, lalu deploy. Tidak perlu menjalankan server SQLite terpisah.
 
+## Laporan perkara
+
+Buka detail perkara aktif, lalu pilih **PDF** atau **DOCX** untuk mengunduh laporan yang mencakup ringkasan perkara, profil, informasi lapangan, analisis teknis, dan personel yang ditugaskan. Pengunduhan mengikuti hak akses perkara pengguna yang sedang masuk.
+
 ## Data lama
 
 Database SQLite pada `data/cases.db` tidak otomatis dimigrasikan ke Supabase, dan akun/password lokal tidak bisa dipindah langsung ke Supabase Auth. Migrasi data lama harus direncanakan serta divalidasi terpisah sebelum menyalin data sensitif. Server SQLite lama hanya dipertahankan sementara sebagai referensi dan untuk tes kompatibilitas lokal; deployment Next.js tidak menggunakannya.

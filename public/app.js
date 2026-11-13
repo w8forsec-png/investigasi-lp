@@ -20,6 +20,25 @@ async function api(url, options = {}) {
   return result;
 }
 
+async function downloadCaseReport(caseId, format) {
+  const response = await fetch(`/api/cases/${caseId}/report?format=${format}`);
+  if (!response.ok) {
+    const result = await response.json();
+    throw new Error(result.error || "Laporan gagal dibuat.");
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const filename = disposition.match(/filename="([^"]+)"/)?.[1] || `laporan-perkara.${format}`;
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 function showLogin() {
   $("#login-view").hidden = false;
   $("#app-view").hidden = true;
@@ -177,13 +196,14 @@ async function openCase(caseId, includeArchived = false) {
   const recordActions = (resource, record, editable = true) => record.deleted_at
     ? `<button class="text-button" data-action="restore-record" data-resource="${resource}" data-id="${record.id}">Pulihkan</button>`
     : editable ? `<button class="text-button" data-action="edit-record" data-resource="${resource}" data-id="${record.id}">Ubah</button><button class="text-button danger-text" data-action="archive-record" data-resource="${resource}" data-id="${record.id}">Arsipkan</button>` : "";
+  const reportActions = item.deleted_at ? "" : `<button class="button secondary small report-download" data-export-report="pdf" title="Unduh laporan PDF">PDF</button><button class="button secondary small report-download" data-export-report="docx" title="Unduh laporan DOCX">DOCX</button>`;
   const detailHeaderActions = item.deleted_at
     ? `<button class="button secondary small" data-action="restore-case" data-id="${item.id}">Pulihkan perkara</button>`
-    : canManage ? `<button class="button secondary small" data-action="edit-case" data-id="${item.id}">Ubah perkara</button><button class="button secondary small danger-text" data-action="archive-case" data-id="${item.id}">Arsipkan</button>` : "";
+    : `${reportActions}${canManage ? `<button class="button secondary small" data-action="edit-case" data-id="${item.id}">Ubah perkara</button><button class="button secondary small danger-text" data-action="archive-case" data-id="${item.id}">Arsipkan</button>` : ""}`;
   $("#case-detail").innerHTML = `
     <div class="dialog-heading"><div><p class="eyebrow">${esc(item.team_name)} · ${esc(item.lp_number)}${item.deleted_at ? " · DIARSIPKAN" : ""}</p><h2>${esc(item.title)}</h2></div><div class="row-actions">${detailHeaderActions}<button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div></div>
     <div class="detail-meta"><span><small>TANGGAL LP</small><strong>${dateLabel(item.reported_at)}</strong></span><span><small>STATUS</small><strong>${esc(item.status)}</strong></span><span><small>TEMPAT KEJADIAN PERKARA</small><strong>${esc(item.location || "—")}</strong></span></div>
-    <div class="detail-archive-toggle"><label><input id="detail-show-archived" type="checkbox" ${state.detailArchived ? "checked" : ""} ${item.deleted_at ? "disabled" : ""}> Tampilkan catatan yang diarsipkan</label></div>
+    <div class="detail-archive-toggle"><label><input id="detail-show-archived" type="checkbox" ${state.detailArchived ? "checked" : ""} ${item.deleted_at ? "disabled" : ""}><span>Tampilkan catatan yang diarsipkan</span></label></div>
     <div class="detail-columns">
       <section><div class="detail-section-title"><div><h3>Profil korban & terduga</h3><p>${data.profiles.length} profil terkait LP</p></div>${!item.deleted_at ? `<button class="button secondary small" id="add-profile">＋ Tambah profil</button>` : ""}</div>
         <div class="detail-list">${profiles.items.length ? profiles.items.map(profile => `<article class="detail-item"><div class="profile-avatar">${esc(profile.name.slice(0, 1).toUpperCase())}</div><div class="detail-item-content"><strong>${esc(profile.name)}${profile.deleted_at ? " · Diarsipkan" : ""}</strong><small><span class="tag">${esc(profile.profile_type)}</span>${profile.alias ? ` · Alias: ${esc(profile.alias)}` : ""}${profile.role_in_case ? ` · ${esc(profile.role_in_case)}` : ""}</small>${profile.nik ? `<small>NIK: ${esc(profile.nik)}</small>` : ""}${profile.phone ? `<small>Nomor HP: ${esc(profile.phone)}</small>` : ""}${profile.address ? `<small>Alamat: ${esc(profile.address)}</small>` : ""}${profile.notes ? `<p>${esc(profile.notes)}</p>` : ""}<div class="row-actions">${recordActions("profiles", profile, !item.deleted_at)}</div></div></article>`).join("") : `<p class="empty-inline">Belum ada profil korban atau terduga pada halaman ini.</p>`}</div>${paginationHtml(profiles.pagination, "detail-profiles")}</section>
@@ -212,6 +232,16 @@ async function openCase(caseId, includeArchived = false) {
   $("#add-profile")?.addEventListener("click", () => openProfileForm());
   $("#add-field-report")?.addEventListener("click", () => openWorkflow("field-report"));
   $("#add-technical")?.addEventListener("click", () => openWorkflow("analysis"));
+  $$("[data-export-report]", $("#case-detail")).forEach(button => button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      await downloadCaseReport(caseId, button.dataset.exportReport);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  }));
   $("#assignment-form")?.addEventListener("submit", async event => {
     event.preventDefault();
     const form = event.currentTarget;

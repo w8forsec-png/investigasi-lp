@@ -1,0 +1,410 @@
+:root {
+  --navy: #171516;
+  --blue: #b3212b;
+  --light-blue: #fff0f0;
+  --brand-red: #b3212b;
+  --brand-red-dark: #921821;
+  --brand-gold: #b7954b;
+  --brand-gold-soft: #fbf5e8;
+  --brand-charcoal: #191617;
+}
+
+body {
+  background: #f7f5f2;
+}
+
+.content-grid > .panel {
+  min-width: 0;
+}
+
+.table-wrap {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dialog .assignment-form label {
+  margin: 0;
+}
+
+.detail-archive-toggle input[type="checkbox"] {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--brand-red);
+}
+
+.detail-archive-toggle label span {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog input::placeholder,
+.dialog textarea::placeholder,
+.login-card input::placeholder {
+  font-size: 10px;
+}
+
+@media (max-width: 1050px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assignment-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assignment-form > .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline-color: #c4585f;
+}
+
+.sidebar {
+  background: var(--brand-charcoal);
+  border-right-color: #30292a;
+  box-shadow: 4px 0 24px #1a12120d;
+}
+
+.brand {
+  color: #fff;
+}
+
+.brand strong {
+  color: #fff;
+}
+
+.brand small {
+  color: #c7bdbf;
+}
+
+.brand-logo {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
+
+.sidebar-logo {
+  width: 40px;
+  height: 52px;
+  padding: 2px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 5px 15px #0005;
+}
+
+.workspace-label {
+  color: #b5abad;
+}
+
+.workspace-name {
+  color: #f2e9ea;
+  background: #262122;
+  border-color: #3a3234;
+}
+
+.nav-item {
+  color: #b9b0b2;
+}
+
+.nav-item:hover {
+  color: #fff;
+  background: #292425;
+}
+
+.nav-item.active {
+  color: #ffdbde;
+  background: #382023;
+  border-left: 3px solid #c63842;
+  padding-left: 8px;
+}
+
+.nav-count {
+  color: #e6dcdd;
+  background: #211d1e;
+  border-color: #403638;
+}
+
+.security-note {
+  color: #d3b46d;
+  border-color: #3a3234;
+}
+
+.security-note strong {
+  color: #eee5e6;
+}
+
+.security-note small {
+  color: #b7abad;
+}
+
+.user-card {
+  border-top-color: #393132;
+}
+
+.user-info strong {
+  color: #f2e9ea;
+}
+
+.user-info small,
+.sidebar .icon-button {
+  color: #b7abad;
+}
+
+.sidebar .icon-button:hover {
+  color: #fff;
+  background: #30292a;
+}
+
+.avatar,
+.mini-avatar {
+  color: #ffe4df;
+  background: #59252b;
+}
+
+.button.primary {
+  background: var(--brand-red);
+  box-shadow: 0 3px 9px #8f18252b;
+}
+
+.button.primary:hover {
+  background: var(--brand-red-dark);
+}
+
+.text-button {
+  color: var(--brand-red);
+}
+
+.nav-item.active .nav-icon {
+  color: #f16a72;
+}
+
+.metric-icon.blue {
+  color: #aa202a;
+  background: #fff0ef;
+}
+
+.metric-icon.violet {
+  color: #96752e;
+  background: var(--brand-gold-soft);
+}
+
+.blue-line,
+.bar-blue {
+  background: var(--brand-red);
+}
+
+.violet-line,
+.bar-violet {
+  background: var(--brand-gold);
+}
+
+.emblem-blue {
+  color: #a51e28;
+  background: #fff0ef;
+}
+
+.emblem-violet {
+  color: #96752e;
+  background: var(--brand-gold-soft);
+}
+
+.profile-avatar {
+  color: #a51e28;
+  background: #fff0ef;
+}
+
+.tag {
+  color: #a51e28;
+  background: #fff0ef;
+}
+
+.privacy-banner {
+  background: #fbf7ef;
+  border-color: #eee4cf;
+}
+
+.privacy-icon {
+  color: #96752e;
+  border-color: #c4a95e;
+}
+
+.privacy-banner strong {
+  color: #66542e;
+}
+
+.login-view {
+  background: radial-gradient(ellipse at 50% 35%, #fff 0%, #fbf8f4 52%, #f2eae5 100%);
+}
+
+.login-card {
+  border-color: #e9dfd8;
+  border-top: 3px solid var(--brand-red);
+  box-shadow: 0 16px 48px #3d201317;
+}
+
+.login-logo {
+  width: 90px;
+  height: 122px;
+  margin: 0 auto 15px;
+}
+
+.login-card .eyebrow {
+  color: var(--brand-red);
+}
+
+@media (max-width: 680px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom-color: #30292a;
+  }
+
+  .button {
+    max-width: 100%;
+    min-height: 38px;
+    white-space: normal;
+  }
+
+  .button.small,
+  .row-actions > .button {
+    min-height: 34px;
+  }
+
+  .dialog-actions .button {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+
+  .assignment-form > .button {
+    min-height: 40px;
+  }
+
+  .detail-dialog .dialog-heading {
+    position: relative;
+    display: block;
+  }
+
+  .detail-dialog .dialog-heading > div:first-child {
+    padding-right: 40px;
+  }
+
+  .detail-dialog .dialog-heading .row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 7px;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .detail-dialog .dialog-heading .row-actions > .button:not(.icon-button) {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0 8px;
+    font-size: 10px;
+    white-space: normal;
+  }
+
+  .detail-dialog .dialog-heading .row-actions > .close-dialog {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+  }
+
+  .dialog input,
+  .dialog select,
+  .dialog textarea,
+  .login-card input,
+  .team-filter select {
+    font-size: 14px;
+  }
+
+  .dialog input::placeholder,
+  .dialog textarea::placeholder,
+  .login-card input::placeholder {
+    font-size: 11px;
+  }
+
+  .dialog select option,
+  .team-filter select option {
+    font-size: 14px;
+  }
+
+  .assignment-form select,
+  .assignment-form select option {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .assignment-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-section-title {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-section-title .button {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .detail-meta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px 12px;
+  }
+
+  .detail-meta > span {
+    display: grid;
+    grid-template-columns: minmax(88px, 0.7fr) minmax(0, 1.3fr);
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .detail-meta > span small {
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .detail-meta > span strong {
+    min-width: 0;
+    margin-top: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .detail-archive-toggle {
+    justify-content: flex-start;
+    margin-top: 10px;
+    padding: 0 12px;
+  }
+
+  .detail-archive-toggle label {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 7px;
+    width: 100%;
+    max-width: 100%;
+    line-height: 1.35;
+  }
+}

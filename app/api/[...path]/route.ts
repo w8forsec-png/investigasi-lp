@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, json } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Database } from "@/lib/database.types";
+import { createCaseDocx, createCasePdf } from "@/lib/case-report";
+
+export const runtime = "nodejs";
 
 type CmsUser = {
   id: number;
@@ -342,6 +345,32 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
       }
       const result = pageData(visible, params.get("page"));
       return json({ cases: result.items, pagination: result.pagination });
+    }
+
+    if (path[0] === "cases" && path.length === 3 && path[2] === "report") {
+      const caseId = Number(path[1]);
+      if (!Number.isSafeInteger(caseId) || caseId < 1) return errorResponse("Perkara tidak ditemukan.", 404);
+      if (!await caseAccess(user, caseId)) return errorResponse("Perkara tidak ditemukan.", 404);
+      const report = await getCaseDetail(caseId, false);
+      if (!report) return errorResponse("Perkara tidak ditemukan.", 404);
+      const format = params.get("format");
+      if (format !== "pdf" && format !== "docx") {
+        return errorResponse("Pilih format laporan PDF atau DOCX.", 400);
+      }
+
+      const baseName = `laporan-${report.case.lp_number.replace(/[^a-zA-Z0-9._-]+/g, "-")}`;
+      const file = format === "pdf" ? await createCasePdf(report) : await createCaseDocx(report);
+      const contentType = format === "pdf"
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      return new NextResponse(new Uint8Array(file), {
+        headers: {
+          "Content-Type": contentType,
+          "Content-Disposition": `attachment; filename="${baseName}.${format}"`,
+          "Cache-Control": "no-store",
+          "X-Content-Type-Options": "nosniff"
+        }
+      });
     }
 
     if (path[0] === "cases" && path.length === 2) {
