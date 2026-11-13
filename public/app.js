@@ -49,6 +49,57 @@ function showApp() {
   $("#app-view").hidden = false;
 }
 
+function resetAccountState() {
+  state.user = null;
+  state.dashboard = null;
+  state.cases = [];
+  state.casePagination = null;
+  state.casePage = 1;
+  state.caseShowArchived = false;
+  state.teams = [];
+  state.teamPages = {};
+  state.teamShowArchived = false;
+  state.activeView = "overview";
+  state.workflow = null;
+  state.peopleByTeam = {};
+  state.caseDetail = null;
+  state.openCaseId = null;
+  state.detailArchived = false;
+  state.detailPages = { profiles: 1, field_reports: 1, technical_entries: 1 };
+  state.editor = null;
+
+  $("#case-search").value = "";
+  $("#case-show-archived").checked = false;
+  $("#team-show-archived").checked = false;
+  $("#team-select").innerHTML = '<option value="">Semua Tim</option>';
+  $("#case-team").replaceChildren();
+  $("#team-cards").replaceChildren();
+  $("#all-cases").replaceChildren();
+  $("#recent-cases").replaceChildren();
+  $("#team-summary").replaceChildren();
+  $("#user-summary").replaceChildren();
+  $("#metric-active").textContent = "—";
+  $("#metric-case-total").textContent = "— perkara keseluruhan";
+  $("#metric-profiles").textContent = "—";
+  $("#metric-technical").textContent = "—";
+  $("#metric-teams").textContent = "—";
+  $("#nav-case-count").textContent = "0";
+  $("#login-form").reset();
+  $("#login-error").textContent = "";
+  $("#password-form").reset();
+  $("#password-error").textContent = "";
+  $("#password-success").textContent = "";
+  $$("[data-password-toggle]").forEach(button => {
+    const input = document.getElementById(button.dataset.passwordToggle);
+    input.type = "password";
+    button.textContent = "Lihat";
+    button.setAttribute("aria-label", "Tampilkan kata sandi");
+    button.setAttribute("aria-pressed", "false");
+  });
+  $$("dialog[open]").forEach(dialog => dialog.close());
+  setView("overview");
+}
+
 function setView(name) {
   state.activeView = name;
   $$(".view").forEach(view => { view.hidden = view.id !== `${name}-view`; });
@@ -58,6 +109,7 @@ function setView(name) {
 
 async function loadApp() {
   const { user } = await api("/api/session");
+  resetAccountState();
   state.user = user;
   showApp();
   $("#user-name").textContent = user.name;
@@ -67,6 +119,7 @@ async function loadApp() {
   const canManageTeamUsers = ["admin", "leader", "analyst"].includes(user.role);
   $("#teams-nav").hidden = !canManageTeamUsers;
   $("#team-summary-panel").hidden = user.role !== "admin";
+  $("#user-summary-panel").hidden = user.role === "admin";
   $("#team-filter").hidden = user.role !== "admin";
   $("#new-case-button").hidden = !["admin", "leader", "analyst"].includes(user.role);
   $("#case-archive-filter").hidden = user.role === "member";
@@ -100,6 +153,13 @@ async function loadDashboard() {
       <div class="team-row-main"><div><strong>${esc(team.name)}</strong><span>${team.active_count || 0} perkara aktif</span></div>
         <div class="progress-track"><span class="${team.id === 1 ? "bar-blue" : "bar-violet"}" style="width:${Math.min(100, (team.active_count || 0) * 18 + 12)}%"></span></div></div>
       <span class="team-total">${team.case_count || 0}</span></div>`).join("");
+  const maxActivity = Math.max(1, ...data.contributors.map(person => person.record_count));
+  $("#user-summary").innerHTML = data.contributors.length ? data.contributors.map(person => `
+    <div class="team-row"><div class="mini-avatar">${esc(person.name.slice(0, 1).toUpperCase())}</div>
+      <div class="team-row-main"><div><strong>${esc(person.name)}</strong><span>${person.record_count} input</span></div>
+        <small class="contributor-breakdown">${person.cases_created} perkara · ${person.profiles_created} profil · ${person.field_reports_created + person.technical_entries_created} catatan</small>
+        <div class="progress-track"><span class="bar-green" style="width:${Math.round(person.record_count / maxActivity * 100)}%"></span></div></div></div>`).join("")
+    : `<p class="empty-inline">Belum ada anggota aktif di tim ini.</p>`;
 }
 
 async function loadCases(page = state.casePage) {
@@ -414,9 +474,51 @@ $("#login-form").addEventListener("submit", async event => {
 
 $("#logout").addEventListener("click", async () => {
   await api("/api/logout", { method: "POST" });
-  state.user = null;
+  resetAccountState();
   showLogin();
 });
+
+$("#change-password").addEventListener("click", () => {
+  $("#password-form").reset();
+  $("#password-error").textContent = "";
+  $("#password-success").textContent = "";
+  $("#password-dialog").showModal();
+});
+$("#password-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("#password-error").textContent = "";
+  $("#password-success").textContent = "";
+  const form = new FormData(event.currentTarget);
+  const newPassword = form.get("new_password");
+  if (newPassword !== form.get("confirm_password")) {
+    $("#password-error").textContent = "Konfirmasi kata sandi baru tidak sama.";
+    return;
+  }
+  try {
+    await api("/api/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: form.get("current_password"), new_password: newPassword })
+    });
+    event.currentTarget.reset();
+    $$("[data-password-toggle]").forEach(button => {
+      const input = document.getElementById(button.dataset.passwordToggle);
+      input.type = "password";
+      button.textContent = "Lihat";
+      button.setAttribute("aria-label", "Tampilkan kata sandi");
+      button.setAttribute("aria-pressed", "false");
+    });
+    $("#password-success").textContent = "Kata sandi berhasil diganti.";
+  } catch (error) { $("#password-error").textContent = error.message; }
+});
+
+$$("[data-password-toggle]").forEach(button => button.addEventListener("click", () => {
+  const input = document.getElementById(button.dataset.passwordToggle);
+  const isVisible = input.type === "password";
+  input.type = isVisible ? "text" : "password";
+  button.textContent = isVisible ? "Sembunyikan" : "Lihat";
+  button.setAttribute("aria-label", `${isVisible ? "Sembunyikan" : "Tampilkan"} kata sandi`);
+  button.setAttribute("aria-pressed", String(isVisible));
+}));
 
 $$(".nav-item").forEach(button => button.addEventListener("click", () => setView(button.dataset.view)));
 $$("[data-go]").forEach(button => button.addEventListener("click", () => setView(button.dataset.go)));

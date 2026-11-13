@@ -1,0 +1,56 @@
+.password-field {
+  display: block;
+  position: relative;
+  margin-top: 6px;
+}
+
+.password-field input,
+.login-card .password-field input {
+  margin-top: 0;
+  padding-right: 82px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #647294;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.password-toggle:hover {
+  color: #3859da;
+}
+
+.contributor-breakdown {
+  display: block;
+  margin: 0 0 6px;
+  color: #9ca3af;
+  font-size: 8px;
+}
+
+.bar-green {
+  background: #48b18e;
+}
+
+.success {
+  min-height: 14px;
+  margin: 5px 0;
+  color: #258a69;
+  font-size: 10px;
+}
+
+@media (max-width: 680px) {
+  .top-actions {
+    gap: 7px;
+  }
+
+  .top-actions .text-button {
+    font-size: 9px;
+    white-space: nowrap;
+  }
+}

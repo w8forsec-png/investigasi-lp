@@ -283,6 +283,57 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
         visible.push({ ...item, team_name: team?.name ?? "" });
       }
       const teams = roleOf(user) === "admin" ? await getTeams(user, false) : [];
+      let contributors: {
+        id: number;
+        name: string;
+        role: string;
+        cases_created: number;
+        profiles_created: number;
+        field_reports_created: number;
+        technical_entries_created: number;
+        record_count: number;
+      }[] = [];
+      const contributorTeamId = user.team_id;
+      if (roleOf(user) !== "admin" && contributorTeamId !== null) {
+        const { data: people, error: peopleError } = await supabaseAdmin.from("users")
+          .select("id,name,role,is_analyst")
+          .eq("team_id", contributorTeamId).neq("role", "admin")
+          .eq("active", true).is("deleted_at", null).order("name");
+        if (peopleError) throw peopleError;
+        contributors = await Promise.all((people ?? []).map(async person => {
+          const [casesResult, profilesResult, reportsResult, entriesResult] = await Promise.all([
+            supabaseAdmin.from("cases").select("id", { count: "exact", head: true })
+              .eq("created_by", person.id).eq("team_id", contributorTeamId).is("deleted_at", null),
+            supabaseAdmin.from("profiles").select("id,cases!inner(team_id,deleted_at)", { count: "exact", head: true })
+              .eq("created_by", person.id).eq("cases.team_id", contributorTeamId)
+              .is("deleted_at", null).is("cases.deleted_at", null),
+            supabaseAdmin.from("field_reports").select("id,cases!inner(team_id,deleted_at)", { count: "exact", head: true })
+              .eq("created_by", person.id).eq("cases.team_id", contributorTeamId)
+              .is("deleted_at", null).is("cases.deleted_at", null),
+            supabaseAdmin.from("technical_entries").select("id,cases!inner(team_id,deleted_at)", { count: "exact", head: true })
+              .eq("created_by", person.id).eq("cases.team_id", contributorTeamId)
+              .is("deleted_at", null).is("cases.deleted_at", null)
+          ]);
+          if (casesResult.error) throw casesResult.error;
+          if (profilesResult.error) throw profilesResult.error;
+          if (reportsResult.error) throw reportsResult.error;
+          if (entriesResult.error) throw entriesResult.error;
+          const casesCreated = casesResult.count ?? 0;
+          const profilesCreated = profilesResult.count ?? 0;
+          const reportsCreated = reportsResult.count ?? 0;
+          const entriesCreated = entriesResult.count ?? 0;
+          return {
+            id: person.id,
+            name: person.name,
+            role: person.is_analyst ? "analyst" : person.role,
+            cases_created: casesCreated,
+            profiles_created: profilesCreated,
+            field_reports_created: reportsCreated,
+            technical_entries_created: entriesCreated,
+            record_count: casesCreated + profilesCreated + reportsCreated + entriesCreated
+          };
+        }));
+      }
       return json({
         totals: {
           cases: visible.length, active: visible.filter(item => item.status !== "Selesai").length,
@@ -292,6 +343,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
           acc[item.status] = (acc[item.status] ?? 0) + 1; return acc;
         }, {}),
         teams,
+        contributors,
         cases: visible.slice(0, 8)
       });
     }
@@ -400,6 +452,27 @@ export async function POST(request: NextRequest, context: { params: Promise<{ pa
     const user = await currentUser();
     if (!user) return errorResponse("Silakan masuk terlebih dahulu.", 401);
     const body = await bodyOf(request);
+
+    if (path[0] === "change-password" && path.length === 1) {
+      const currentPassword = String(body.current_password ?? "");
+      const newPassword = String(body.new_password ?? "");
+      if (newPassword.length < 12) return errorResponse("Kata sandi baru minimal 12 karakter.");
+      const authClient = createClient(publicUrl, anonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+      const { error: verifyError } = await authClient.auth.signInWithPassword({
+        email: emailFor(user.username), password: currentPassword
+      });
+      if (verifyError) return errorResponse("Kata sandi saat ini tidak sesuai.", 400);
+      const { error: signOutError } = await authClient.auth.signOut({ scope: "local" });
+      if (signOutError) throw signOutError;
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.auth_user_id, {
+        password: newPassword
+      });
+      if (updateError) return errorResponse(updateError.message, 400);
+      await audit(user.id, "password.changed");
+      return json({ ok: true });
+    }
 
     if (path[0] === "users" && path.length === 1) {
       if (!elevated(user)) return errorResponse("Hanya pimpinan, Katim, atau Tim Analis yang dapat membuat akun.", 403);

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#171516">
   <title>Dashboard Penanganan Perkara</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/account.css">
   <link rel="stylesheet" href="/workflow.css">
   <link rel="stylesheet" href="/brand-theme.css">
   <script src="/app.js" defer></script>
@@ -18,7 +19,7 @@
       <h1>Selamat datang</h1>
       <p class="muted">Masuk untuk melihat perkara sesuai peran dan tim Anda.</p>
       <label>Nama pengguna<input name="username" autocomplete="username" required></label>
-      <label>Kata sandi<input name="password" type="password" autocomplete="current-password" required></label>
+      <label>Kata sandi<span class="password-field"><input id="login-password" name="password" type="password" autocomplete="current-password" required><button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></span></label>
       <p id="login-error" class="error" role="alert"></p>
       <button class="button primary wide" type="submit">Masuk ke dashboard <span>→</span></button>
       <small>Demo lokal · data contoh</small>
@@ -46,7 +47,7 @@
     <main class="main-content">
       <header class="topbar">
         <div class="breadcrumbs">Penanganan Perkara <span>/</span> <strong id="breadcrumb-current">Ringkasan</strong></div>
-        <div class="top-actions"><span class="system-status"><i></i> Sistem aktif</span><button class="icon-button notification" title="Notifikasi" aria-label="Notifikasi">♧<b></b></button></div>
+        <div class="top-actions"><button id="change-password" class="text-button" type="button" title="Ganti kata sandi">Ganti kata sandi</button><span class="system-status"><i></i> Sistem aktif</span><button class="icon-button notification" title="Notifikasi" aria-label="Notifikasi">♧<b></b></button></div>
       </header>
       <section id="overview-view" class="view">
         <div class="page-heading">
@@ -68,6 +69,11 @@
             <div class="panel-heading"><div><h2>Ringkasan tim</h2><p>Distribusi beban perkara aktif</p></div><span class="panel-menu">•••</span></div>
             <div id="team-summary" class="team-summary"></div>
             <div class="panel-footnote"><span class="status-dot"></span> Diperbarui saat data dimuat</div>
+          </section>
+          <section class="panel team-panel" id="user-summary-panel" hidden>
+            <div class="panel-heading"><div><h2>Ringkasan anggota</h2><p>Jumlah data yang diinput anggota tim</p></div></div>
+            <div id="user-summary" class="team-summary"></div>
+            <div class="panel-footnote"><span class="status-dot"></span> Perkara, profil, dan catatan yang diinput</div>
           </section>
         </div>
         <div class="privacy-banner"><span class="privacy-icon">i</span><div><strong>Gunakan data sesuai kewenangan dan dasar hukum yang berlaku.</strong><p>Hindari memasukkan data pribadi nyata ke lingkungan demo. Setiap perubahan dicatat untuk audit.</p></div></div>
@@ -166,6 +172,18 @@
       <p class="muted">Gunakan kata sandi awal unik dan sampaikan melalui kanal terpisah.</p>
       <p id="user-error" class="error" role="alert"></p>
       <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button type="submit" class="button primary">Buat akun</button></div>
+    </form>
+  </dialog>
+  <dialog id="password-dialog" class="dialog">
+    <form id="password-form">
+      <div class="dialog-heading"><div><p class="eyebrow">KEAMANAN AKUN</p><h2>Ganti kata sandi</h2></div><button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div>
+      <label>Kata sandi saat ini<span class="password-field"><input id="current-password" name="current_password" type="password" autocomplete="current-password" required><button class="password-toggle" type="button" data-password-toggle="current-password" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></span></label>
+      <label>Kata sandi baru<span class="password-field"><input id="new-password" name="new_password" type="password" autocomplete="new-password" minlength="12" required><button class="password-toggle" type="button" data-password-toggle="new-password" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></span></label>
+      <label>Ulangi kata sandi baru<span class="password-field"><input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="12" required><button class="password-toggle" type="button" data-password-toggle="confirm-password" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></span></label>
+      <p class="muted">Kata sandi baru minimal 12 karakter.</p>
+      <p id="password-error" class="error" role="alert"></p>
+      <p id="password-success" class="success" role="status"></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button type="submit" class="button primary">Simpan kata sandi</button></div>
     </form>
   </dialog>
 </body>

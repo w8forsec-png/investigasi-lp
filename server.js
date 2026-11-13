@@ -341,6 +341,30 @@ async function handleApi(req, res, url) {
     const team = user.team_id ? db.prepare("SELECT name FROM teams WHERE id = ?").get(user.team_id) : null;
     return json(res, 200, { user: { ...user, team_name: team?.name || "Semua Tim" } });
   }
+  if (pathname === "/api/change-password" && req.method === "POST") {
+    const body = await readBody(req);
+    const currentPassword = String(body.current_password || "");
+    const newPassword = String(body.new_password || "");
+    if (newPassword.length < 12) {
+      return json(res, 400, { error: "Kata sandi baru minimal 12 karakter." });
+    }
+    const account = db.prepare("SELECT password_salt, password_hash FROM users WHERE id = ?").get(user.id);
+    const candidate = crypto.scryptSync(currentPassword, account.password_salt, 64);
+    const expected = Buffer.from(account.password_hash, "hex");
+    if (candidate.length !== expected.length || !crypto.timingSafeEqual(candidate, expected)) {
+      return json(res, 400, { error: "Kata sandi saat ini tidak sesuai." });
+    }
+    const passwordInfo = passwordRecord(newPassword);
+    db.prepare("UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?")
+      .run(passwordInfo.salt, passwordInfo.hash, user.id);
+    const currentToken = (req.headers.cookie || "").split(";").map(x => x.trim())
+      .find(x => x.startsWith("cms_session="))?.slice("cms_session=".length);
+    for (const [token, session] of sessions) {
+      if (session.userId === user.id && token !== currentToken) sessions.delete(token);
+    }
+    audit(user.id, "password.changed");
+    return json(res, 200, { ok: true });
+  }
   if (pathname === "/api/dashboard" && req.method === "GET") {
     const teamFilter = url.searchParams.get("team");
     const visible = scopedCases(user).filter(c => !teamFilter || user.role === "admin" && String(c.team_id) === teamFilter);
@@ -356,10 +380,28 @@ async function handleApi(req, res, url) {
           WHERE t.deleted_at IS NULL GROUP BY t.id ORDER BY t.id
         `).all()
       : [];
+    const contributors = user.role === "admin" ? [] : db.prepare(`
+      SELECT u.id, u.name, CASE WHEN u.is_analyst = 1 THEN 'analyst' ELSE u.role END AS role,
+        (SELECT COUNT(*) FROM cases c
+          WHERE c.created_by = u.id AND c.team_id = u.team_id AND c.deleted_at IS NULL) AS cases_created,
+        (SELECT COUNT(*) FROM profiles p JOIN cases c ON c.id = p.case_id
+          WHERE p.created_by = u.id AND p.deleted_at IS NULL AND c.team_id = u.team_id AND c.deleted_at IS NULL) AS profiles_created,
+        (SELECT COUNT(*) FROM field_reports r JOIN cases c ON c.id = r.case_id
+          WHERE r.created_by = u.id AND r.deleted_at IS NULL AND c.team_id = u.team_id AND c.deleted_at IS NULL) AS field_reports_created,
+        (SELECT COUNT(*) FROM technical_entries e JOIN cases c ON c.id = e.case_id
+          WHERE e.created_by = u.id AND e.deleted_at IS NULL AND c.team_id = u.team_id AND c.deleted_at IS NULL) AS technical_entries_created
+      FROM users u
+      WHERE u.team_id = ? AND u.role != 'admin' AND u.active = 1 AND u.deleted_at IS NULL
+      ORDER BY u.name COLLATE NOCASE
+    `).all(user.team_id).map(person => ({
+      ...person,
+      record_count: person.cases_created + person.profiles_created + person.field_reports_created + person.technical_entries_created
+    }));
     return json(res, 200, {
       totals: { cases: visible.length, active: visible.filter(c => c.status !== "Selesai").length, profiles: visible.reduce((sum, c) => sum + db.prepare("SELECT COUNT(*) AS n FROM profiles WHERE case_id = ? AND deleted_at IS NULL").get(c.id).n, 0), technical_entries: visible.reduce((sum, c) => sum + db.prepare("SELECT COUNT(*) AS n FROM technical_entries WHERE case_id = ? AND deleted_at IS NULL").get(c.id).n, 0) },
       casesByStatus,
       teams: teamSummary,
+      contributors,
       cases: visible.slice(0, 8).map(c => ({ ...c, team_name: db.prepare("SELECT name FROM teams WHERE id = ?").get(c.team_id).name }))
     });
   }

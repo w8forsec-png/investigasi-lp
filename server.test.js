@@ -47,6 +47,51 @@ test("akses perkara dibatasi menurut peran dan penugasan", () => {
   assert.equal(canAccessCase(admin, 9999), false);
 });
 
+test("ringkasan input dashboard hanya menampilkan anggota dari tim pengguna", async () => {
+  const loginResponse = await fetch(`${baseUrl}/api/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "personel.alfa", password: testPassword })
+  });
+  const cookie = loginResponse.headers.get("set-cookie").split(";")[0];
+  const response = await fetch(`${baseUrl}/api/dashboard`, { headers: { cookie } });
+  assert.equal(response.status, 200);
+  const { contributors, teams } = await response.json();
+  assert.equal(teams.length, 0);
+  assert.equal(contributors.some(person => person.name === "Personel Bravo"), false);
+  assert.equal(contributors.find(person => person.name === "Personel Alfa").technical_entries_created, 1);
+});
+
+test("pergantian kata sandi memverifikasi kata sandi lama dan membatalkan sesi lain", async () => {
+  const login = async password => {
+    const response = await fetch(`${baseUrl}/api/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "admin", password })
+    });
+    return response;
+  };
+  const activeLogin = await login(testPassword);
+  const activeCookie = activeLogin.headers.get("set-cookie").split(";")[0];
+  const otherLogin = await login(testPassword);
+  const otherCookie = otherLogin.headers.get("set-cookie").split(";")[0];
+  const changePassword = (cookie, currentPassword, newPassword) => fetch(`${baseUrl}/api/change-password`, {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+  });
+
+  assert.equal((await changePassword(activeCookie, "kata-sandi-salah", "KataSandiBaru123!")).status, 400);
+  assert.equal((await changePassword(activeCookie, testPassword, "pendek")).status, 400);
+  assert.equal((await changePassword(activeCookie, testPassword, "KataSandiBaru123!")).status, 200);
+  assert.equal((await fetch(`${baseUrl}/api/session`, { headers: { cookie: activeCookie } })).status, 200);
+  assert.equal((await fetch(`${baseUrl}/api/session`, { headers: { cookie: otherCookie } })).status, 401);
+  assert.equal((await login(testPassword)).status, 401);
+  assert.equal((await login("KataSandiBaru123!")).status, 200);
+
+  assert.equal((await changePassword(activeCookie, "KataSandiBaru123!", testPassword)).status, 200);
+});
+
 test("API hanya menampilkan perkara yang diizinkan untuk pengguna", async () => {
   const anonymousResponse = await fetch(`${baseUrl}/api/cases`);
   assert.equal(anonymousResponse.status, 401);

@@ -12,6 +12,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <head>
         <meta name="theme-color" content="#171516" />
         <link rel="stylesheet" href="/styles.css" />
+        <link rel="stylesheet" href="/account.css" />
         <link rel="stylesheet" href="/workflow.css" />
         <link rel="stylesheet" href="/brand-theme.css" />
       </head>
