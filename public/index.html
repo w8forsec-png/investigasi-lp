@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>Dashboard Penanganan Perkara</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/workflow.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div id="login-view" class="login-view" hidden>
+    <form id="login-form" class="login-card">
+      <div class="brand-mark">P</div>
+      <p class="eyebrow">RUANG KERJA INTERNAL</p>
+      <h1>Selamat datang</h1>
+      <p class="muted">Masuk untuk melihat perkara sesuai peran dan tim Anda.</p>
+      <label>Nama pengguna<input name="username" autocomplete="username" required></label>
+      <label>Kata sandi<input name="password" type="password" autocomplete="current-password" required></label>
+      <p id="login-error" class="error" role="alert"></p>
+      <button class="button primary wide" type="submit">Masuk ke dashboard <span>→</span></button>
+      <small>Demo lokal · data contoh</small>
+    </form>
+  </div>
+
+  <div id="app-view" class="app-shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Dashboard">
+        <span class="brand-mark">P</span>
+        <span><strong>Perkara</strong><small>CASE MANAGEMENT</small></span>
+      </a>
+      <div class="workspace-label">WORKSPACE</div>
+      <div id="workspace-name" class="workspace-name">Memuat…</div>
+      <nav class="navigation" aria-label="Navigasi utama">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">▦</span> Ringkasan</button>
+        <button class="nav-item" data-view="cases"><span class="nav-icon">▤</span> Daftar perkara <span class="nav-count" id="nav-case-count">0</span></button>
+        <button class="nav-item" data-view="teams" id="teams-nav"><span class="nav-icon">♧</span> Tim & personel</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="security-note"><span>◆</span><div><strong>Ruang terbatas</strong><small>Akses tercatat · sesuai peran</small></div></div>
+        <div class="user-card"><div class="avatar" id="user-avatar">—</div><div class="user-info"><strong id="user-name">Pengguna</strong><small id="user-role">Peran</small></div><button id="logout" class="icon-button" title="Keluar" aria-label="Keluar">↗</button></div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="breadcrumbs">Penanganan Perkara <span>/</span> <strong id="breadcrumb-current">Ringkasan</strong></div>
+        <div class="top-actions"><span class="system-status"><i></i> Sistem aktif</span><button class="icon-button notification" title="Notifikasi" aria-label="Notifikasi">♧<b></b></button></div>
+      </header>
+      <section id="overview-view" class="view">
+        <div class="page-heading">
+          <div><p class="eyebrow" id="welcome-eyebrow">PUSAT KENDALI</p><h1>Ringkasan penanganan</h1><p class="muted">Pantau progres dan beban kerja perkara dalam satu ruang.</p></div>
+          <div id="team-filter" class="team-filter" hidden><label for="team-select">Tampilkan</label><select id="team-select"><option value="">Semua Tim</option></select></div>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card"><div class="metric-heading"><span>Perkara aktif</span><span class="metric-icon blue">▤</span></div><strong id="metric-active">—</strong><small><span class="metric-caption" id="metric-case-total">— perkara keseluruhan</span></small><div class="metric-line blue-line"></div></article>
+          <article class="metric-card"><div class="metric-heading"><span>Profil terdata</span><span class="metric-icon violet">♙</span></div><strong id="metric-profiles">—</strong><small>Dalam perkara yang dapat diakses</small><div class="metric-line violet-line"></div></article>
+          <article class="metric-card"><div class="metric-heading"><span>Catatan teknis</span><span class="metric-icon amber">⌁</span></div><strong id="metric-technical">—</strong><small>Dokumentasi analisis</small><div class="metric-line amber-line"></div></article>
+          <article class="metric-card"><div class="metric-heading"><span>Tim terpantau</span><span class="metric-icon green">♧</span></div><strong id="metric-teams">—</strong><small>Ruang kerja aktif</small><div class="metric-line green-line"></div></article>
+        </div>
+        <div class="content-grid">
+          <section class="panel cases-panel">
+            <div class="panel-heading"><div><h2>Perkara terbaru</h2><p>Perkembangan terakhir dari ruang kerja Anda</p></div><button class="text-button" data-go="cases">Lihat semua <span>→</span></button></div>
+            <div class="table-wrap"><table><thead><tr><th>PERKARA</th><th>TIM</th><th>TANGGAL LP</th><th>STATUS</th></tr></thead><tbody id="recent-cases"></tbody></table></div>
+          </section>
+          <section class="panel team-panel" id="team-summary-panel">
+            <div class="panel-heading"><div><h2>Ringkasan tim</h2><p>Distribusi beban perkara aktif</p></div><span class="panel-menu">•••</span></div>
+            <div id="team-summary" class="team-summary"></div>
+            <div class="panel-footnote"><span class="status-dot"></span> Diperbarui saat data dimuat</div>
+          </section>
+        </div>
+        <div class="privacy-banner"><span class="privacy-icon">i</span><div><strong>Gunakan data sesuai kewenangan dan dasar hukum yang berlaku.</strong><p>Hindari memasukkan data pribadi nyata ke lingkungan demo. Setiap perubahan dicatat untuk audit.</p></div></div>
+      </section>
+
+      <section id="cases-view" class="view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">PORTOFOLIO</p><h1>Daftar perkara</h1><p class="muted">Perkara yang tersedia sesuai ruang lingkup akses Anda.</p></div><button id="new-case-button" class="button primary" hidden>＋ Perkara baru</button></div>
+        <section class="panel list-panel"><div class="list-toolbar"><div class="search-wrap"><span>⌕</span><input id="case-search" placeholder="Cari nomor LP atau judul perkara…" aria-label="Cari perkara"></div><div class="list-toolbar-actions"><label id="case-archive-filter" class="archive-filter" hidden><input id="case-show-archived" type="checkbox"> Tampilkan arsip</label><span id="case-list-count" class="muted"></span></div></div>
+          <div class="table-wrap"><table><thead><tr><th>NOMOR / PERKARA</th><th>TIM</th><th>TANGGAL LP</th><th>PROFIL</th><th>CATATAN TEKNIS</th><th>STATUS</th><th>TINDAKAN</th></tr></thead><tbody id="all-cases"></tbody></table></div>
+          <div id="cases-pagination" class="pagination"></div>
+        </section>
+      </section>
+
+      <section id="teams-view" class="view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">ORGANISASI</p><h1>Tim & personel</h1><p class="muted">Ringkasan distribusi perkara per unit.</p></div><div class="list-toolbar-actions"><label class="archive-filter"><input id="team-show-archived" type="checkbox"> Tampilkan arsip</label><button id="add-personnel-button" class="button primary" hidden>＋ Tambah personel</button></div></div>
+        <div id="team-cards" class="team-cards"></div>
+      </section>
+      <footer class="footer"><span>Dashboard Penanganan Perkara</span><span>Prototipe lokal · <span id="current-year"></span></span></footer>
+    </main>
+  </div>
+
+  <dialog id="case-dialog" class="dialog">
+    <form id="case-form" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">DISTRIBUSI PERKARA</p><h2 id="case-form-title">Daftarkan perkara baru</h2></div><button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div>
+      <label>Nomor LP<input name="lp_number" required maxlength="80" placeholder="LP/…"></label>
+      <label>Judul perkara<input name="title" required maxlength="120" placeholder="Nama ringkas perkara"></label>
+      <div class="form-row"><label>Tanggal LP<input name="reported_at" type="date" required></label><label id="case-team-field">Tim penanggung jawab<select name="team_id" id="case-team" required></select></label></div>
+      <label>Pasal / dasar perkara<input name="statute" maxlength="150"></label>
+      <label>Tempat kejadian perkara (TKP)<input name="location" maxlength="300" placeholder="Alamat atau lokasi kejadian"></label>
+      <section class="victim-fields">
+        <h3>Profil korban pada LP (opsional)</h3>
+        <label>Nama korban<input name="victim_name" maxlength="100"></label>
+        <div class="form-row"><label>NIK<input name="victim_nik" maxlength="32" inputmode="numeric"></label><label>Nomor HP<input name="victim_phone" maxlength="32" inputmode="tel"></label></div>
+        <label>Alamat korban<textarea name="victim_address" rows="2" maxlength="300"></textarea></label>
+      </section>
+      <label>Status<select name="status"><option>Aktif</option><option>Proses</option><option>Selesai</option></select></label>
+      <p id="case-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button id="case-form-submit" type="submit" class="button primary">Simpan perkara</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="detail-dialog" class="dialog detail-dialog">
+    <div id="case-detail"></div>
+  </dialog>
+  <dialog id="profile-dialog" class="dialog">
+    <form id="profile-form">
+      <div class="dialog-heading"><div><p class="eyebrow">PROFIL TERKAIT LP</p><h2 id="profile-dialog-title">Tambah profil korban / terduga</h2></div><button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div>
+      <label>Jenis profil<select name="profile_type" required><option value="Korban">Korban</option><option value="Terduga">Terduga</option></select></label>
+      <label>Nama lengkap<input name="name" required maxlength="100"></label>
+      <div class="form-row"><label>NIK<input name="nik" maxlength="32" inputmode="numeric"></label><label>Nomor HP<input name="phone" maxlength="32" inputmode="tel"></label></div>
+      <label>Alamat<textarea name="address" rows="3" maxlength="300"></textarea></label>
+      <div class="form-row"><label>Alias<input name="alias" maxlength="100"></label><label>Peran dalam perkara<input name="role_in_case" maxlength="80"></label></div>
+      <label>Catatan<textarea name="notes" rows="3" maxlength="1000"></textarea></label>
+      <p id="profile-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button type="submit" class="button primary">Simpan profil</button></div>
+    </form>
+  </dialog>
+  <dialog id="workflow-dialog" class="dialog workflow-dialog">
+    <form id="workflow-form">
+      <div class="dialog-heading"><div><p class="eyebrow" id="workflow-eyebrow"></p><h2 id="workflow-title"></h2></div><button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div>
+      <div id="field-report-fields" hidden>
+        <label>Sumber informasi<input name="source_unit" value="Tim Lapangan" maxlength="100" required></label>
+        <label>Ringkasan informasi<input name="title" maxlength="120" required></label>
+        <label>Referensi / tanggal laporan<input name="reference" maxlength="150" placeholder="Opsional"></label>
+        <label>Rincian yang disampaikan<textarea name="details" rows="5" maxlength="3000" required></textarea></label>
+      </div>
+      <div id="analysis-fields" hidden>
+        <input type="hidden" name="field_report_id">
+        <input type="hidden" name="parent_entry_id">
+        <label>Kategori analisis<input name="category" maxlength="80" placeholder="Contoh: analisis dokumen" required></label>
+        <label>Judul perkembangan<input name="title" maxlength="120" required></label>
+        <label>Referensi data<input name="target_ref" maxlength="120" placeholder="Opsional"></label>
+        <label>Status perkembangan<select name="progress_status"><option>Analisis awal</option><option>Tindak lanjut</option><option>Selesai</option></select></label>
+        <label>Hasil / catatan analisis<textarea name="findings" rows="5" maxlength="3000" required></textarea></label>
+      </div>
+      <p id="workflow-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button type="submit" class="button primary">Simpan perkembangan</button></div>
+    </form>
+  </dialog>
+  <dialog id="editor-dialog" class="dialog editor-dialog">
+    <form id="editor-form">
+      <div class="dialog-heading"><div><p class="eyebrow" id="editor-eyebrow">UBAH DATA</p><h2 id="editor-title"></h2></div><button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div>
+      <div id="editor-fields"></div>
+      <p id="editor-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button type="submit" class="button primary">Simpan perubahan</button></div>
+    </form>
+  </dialog>
+  <dialog id="user-dialog" class="dialog">
+    <form id="user-form">
+      <div class="dialog-heading"><div><p class="eyebrow">AKUN TIM</p><h2>Tambah akun personel</h2></div><button type="button" class="icon-button close-dialog" aria-label="Tutup">×</button></div>
+      <label>Nama lengkap<input name="name" required maxlength="100"></label>
+      <div class="form-row"><label>Nama pengguna<input name="username" required minlength="3" maxlength="50" autocomplete="off"></label><label>Kata sandi awal<input name="password" type="password" required minlength="12" autocomplete="new-password"></label></div>
+      <div class="form-row"><label>Pangkat / NRP<input name="rank_number" maxlength="80"></label><label>Spesialisasi<input name="specialty" maxlength="100"></label></div>
+      <label>Peran<select id="user-role-select" name="role" required></select></label>
+      <label id="user-team-field">Tim<select id="user-team" name="team_id" required></select></label>
+      <p class="muted">Gunakan kata sandi awal unik dan sampaikan melalui kanal terpisah.</p>
+      <p id="user-error" class="error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">Batal</button><button type="submit" class="button primary">Buat akun</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
