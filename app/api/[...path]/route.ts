@@ -159,24 +159,26 @@ async function getTeams(user: CmsUser, includeArchived: boolean) {
   if (!includeArchived) query = query.is("deleted_at", null);
   const { data: teams, error } = await query;
   if (error) throw error;
-  const results = [];
-  for (const team of teams ?? []) {
-    const [{ data: people, error: peopleError }, { data: cases, error: casesError }] = await Promise.all([
-      supabaseAdmin.from("users").select("name,role,is_analyst,active,deleted_at")
-        .eq("team_id", team.id).is("deleted_at", null).eq("active", true),
-      supabaseAdmin.from("cases").select("id,status,deleted_at")
-        .eq("team_id", team.id).is("deleted_at", null)
-    ]);
-    if (peopleError) throw peopleError;
-    if (casesError) throw casesError;
-    const leader = people?.find(person => person.role === "leader");
-    results.push({
-      ...team, leader: leader?.name ?? null, members: people?.length ?? 0,
-      case_count: cases?.length ?? 0,
-      active_cases: cases?.filter(item => item.status !== "Selesai").length ?? 0
-    });
-  }
-  return results;
+  if (!teams?.length) return [];
+  const teamIds = teams.map(team => team.id);
+  const [{ data: people, error: peopleError }, { data: cases, error: casesError }] = await Promise.all([
+    supabaseAdmin.from("users").select("team_id,name,role")
+      .in("team_id", teamIds).is("deleted_at", null).eq("active", true),
+    supabaseAdmin.from("cases").select("team_id,status")
+      .in("team_id", teamIds).is("deleted_at", null)
+  ]);
+  if (peopleError) throw peopleError;
+  if (casesError) throw casesError;
+  return teams.map(team => {
+    const teamPeople = (people ?? []).filter(person => person.team_id === team.id);
+    const teamCases = (cases ?? []).filter(item => item.team_id === team.id);
+    const leader = teamPeople.find(person => person.role === "leader");
+    return {
+      ...team, leader: leader?.name ?? null, members: teamPeople.length,
+      case_count: teamCases.length,
+      active_cases: teamCases.filter(item => item.status !== "Selesai").length
+    };
+  });
 }
 
 async function getCaseDetail(caseId: number, includeArchived: boolean) {
@@ -266,22 +268,27 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
       else if (params.get("team")) query = query.eq("team_id", Number(params.get("team")));
       const { data: cases, error } = await query;
       if (error) throw error;
-      const visible = [];
-      let profileCount = 0;
-      let technicalCount = 0;
-      for (const item of cases ?? []) {
-        if (roleOf(user) === "member" && !(await caseAccess(user, item.id))) continue;
-        const [profiles, entries] = await Promise.all([
-          supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("case_id", item.id).is("deleted_at", null),
-          supabaseAdmin.from("technical_entries").select("id", { count: "exact", head: true }).eq("case_id", item.id).is("deleted_at", null)
-        ]);
-        if (profiles.error) throw profiles.error;
-        if (entries.error) throw entries.error;
-        profileCount += profiles.count ?? 0;
-        technicalCount += entries.count ?? 0;
-        const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
-        visible.push({ ...item, team_name: team?.name ?? "" });
+      const caseItems = cases ?? [];
+      let memberCaseIds: Set<number> | null = null;
+      if (roleOf(user) === "member" && caseItems.length) {
+        const { data: memberships, error: membershipError } = await supabaseAdmin.from("case_members")
+          .select("case_id").eq("user_id", user.id).in("case_id", caseItems.map(item => item.id));
+        if (membershipError) throw membershipError;
+        memberCaseIds = new Set((memberships ?? []).map(membership => membership.case_id));
       }
+      const visible = caseItems.filter(item => !memberCaseIds || memberCaseIds.has(item.id)).map(item => {
+        const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
+        return { ...item, team_name: team?.name ?? "" };
+      });
+      const visibleCaseIds = visible.map(item => item.id);
+      const { data: activityCounts, error: activityError } = visibleCaseIds.length
+        ? await supabaseAdmin.from("case_activity_counts").select("case_id,profile_count,technical_count")
+          .in("case_id", visibleCaseIds)
+        : { data: [], error: null };
+      if (activityError) throw activityError;
+      const activityByCase = new Map((activityCounts ?? []).map(item => [item.case_id, item]));
+      const profileCount = (activityCounts ?? []).reduce((total, item) => total + item.profile_count, 0);
+      const technicalCount = (activityCounts ?? []).reduce((total, item) => total + item.technical_count, 0);
       const teams = roleOf(user) === "admin" ? await getTeams(user, false) : [];
       let contributors: {
         id: number;
@@ -300,28 +307,19 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
           .eq("team_id", contributorTeamId).neq("role", "admin")
           .eq("active", true).is("deleted_at", null).order("name");
         if (peopleError) throw peopleError;
-        contributors = await Promise.all((people ?? []).map(async person => {
-          const [casesResult, profilesResult, reportsResult, entriesResult] = await Promise.all([
-            supabaseAdmin.from("cases").select("id", { count: "exact", head: true })
-              .eq("created_by", person.id).eq("team_id", contributorTeamId).is("deleted_at", null),
-            supabaseAdmin.from("profiles").select("id,cases!inner(team_id,deleted_at)", { count: "exact", head: true })
-              .eq("created_by", person.id).eq("cases.team_id", contributorTeamId)
-              .is("deleted_at", null).is("cases.deleted_at", null),
-            supabaseAdmin.from("field_reports").select("id,cases!inner(team_id,deleted_at)", { count: "exact", head: true })
-              .eq("created_by", person.id).eq("cases.team_id", contributorTeamId)
-              .is("deleted_at", null).is("cases.deleted_at", null),
-            supabaseAdmin.from("technical_entries").select("id,cases!inner(team_id,deleted_at)", { count: "exact", head: true })
-              .eq("created_by", person.id).eq("cases.team_id", contributorTeamId)
-              .is("deleted_at", null).is("cases.deleted_at", null)
-          ]);
-          if (casesResult.error) throw casesResult.error;
-          if (profilesResult.error) throw profilesResult.error;
-          if (reportsResult.error) throw reportsResult.error;
-          if (entriesResult.error) throw entriesResult.error;
-          const casesCreated = casesResult.count ?? 0;
-          const profilesCreated = profilesResult.count ?? 0;
-          const reportsCreated = reportsResult.count ?? 0;
-          const entriesCreated = entriesResult.count ?? 0;
+        const peopleList = people ?? [];
+        const { data: activity, error: activityError } = peopleList.length
+          ? await supabaseAdmin.from("team_contributor_activity").select("*")
+            .eq("team_id", contributorTeamId).in("user_id", peopleList.map(person => person.id))
+          : { data: [], error: null };
+        if (activityError) throw activityError;
+        const activityByUser = new Map((activity ?? []).map(item => [item.user_id, item]));
+        contributors = peopleList.map(person => {
+          const stats = activityByUser.get(person.id);
+          const casesCreated = stats?.cases_created ?? 0;
+          const profilesCreated = stats?.profiles_created ?? 0;
+          const reportsCreated = stats?.field_reports_created ?? 0;
+          const entriesCreated = stats?.technical_entries_created ?? 0;
           return {
             id: person.id,
             name: person.name,
@@ -332,7 +330,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
             technical_entries_created: entriesCreated,
             record_count: casesCreated + profilesCreated + reportsCreated + entriesCreated
           };
-        }));
+        });
       }
       return json({
         totals: {
@@ -379,24 +377,37 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
       const { data, error } = await query;
       if (error) throw error;
       const search = (params.get("q") ?? "").trim().toLowerCase();
+      const caseItems = data ?? [];
+      let memberCaseIds: Set<number> | null = null;
+      if (roleOf(user) === "member" && caseItems.length) {
+        const { data: memberships, error: membershipError } = await supabaseAdmin.from("case_members")
+          .select("case_id").eq("user_id", user.id).in("case_id", caseItems.map(item => item.id));
+        if (membershipError) throw membershipError;
+        memberCaseIds = new Set((memberships ?? []).map(membership => membership.case_id));
+      }
       const visible = [];
-      for (const item of data ?? []) {
-        if (roleOf(user) === "member" && !(await caseAccess(user, item.id, includeArchived))) continue;
+      for (const item of caseItems) {
+        if (memberCaseIds && !memberCaseIds.has(item.id)) continue;
         const team = Array.isArray(item.teams) ? item.teams[0] : item.teams;
         if (search && !`${item.lp_number} ${item.title} ${team?.name ?? ""}`.toLowerCase().includes(search)) continue;
-        const [profiles, entries] = await Promise.all([
-          supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).eq("case_id", item.id).is("deleted_at", null),
-          supabaseAdmin.from("technical_entries").select("id", { count: "exact", head: true }).eq("case_id", item.id).is("deleted_at", null)
-        ]);
-        if (profiles.error) throw profiles.error;
-        if (entries.error) throw entries.error;
-        visible.push({
-          ...item, team_name: team?.name ?? "", profile_count: profiles.count ?? 0,
-          technical_count: entries.count ?? 0
-        });
+        visible.push({ ...item, team_name: team?.name ?? "" });
       }
       const result = pageData(visible, params.get("page"));
-      return json({ cases: result.items, pagination: result.pagination });
+      const pageCaseIds = result.items.map(item => item.id);
+      const { data: activityCounts, error: activityError } = pageCaseIds.length
+        ? await supabaseAdmin.from("case_activity_counts").select("case_id,profile_count,technical_count")
+          .in("case_id", pageCaseIds)
+        : { data: [], error: null };
+      if (activityError) throw activityError;
+      const activityByCase = new Map((activityCounts ?? []).map(item => [item.case_id, item]));
+      return json({
+        cases: result.items.map(item => ({
+          ...item,
+          profile_count: activityByCase.get(item.id)?.profile_count ?? 0,
+          technical_count: activityByCase.get(item.id)?.technical_count ?? 0
+        })),
+        pagination: result.pagination
+      });
     }
 
     if (path[0] === "cases" && path.length === 3 && path[2] === "report") {

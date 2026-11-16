@@ -64,7 +64,19 @@ export type Database = {
         id: number; actor_id: number; action: string; case_id: number | null; detail: string;
       } & Timestamped>;
     };
-    Views: Record<string, never>;
+    Views: {
+      case_activity_counts: {
+        Row: { case_id: number; profile_count: number; technical_count: number };
+        Relationships: [];
+      };
+      team_contributor_activity: {
+        Row: {
+          team_id: number; user_id: number; cases_created: number; profiles_created: number;
+          field_reports_created: number; technical_entries_created: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       create_case_with_victim: {
         Args: {

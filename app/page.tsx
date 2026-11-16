@@ -1,8 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-export const dynamic = "force-dynamic";
-
 export default async function HomePage() {
   const htmlPath = path.join(process.cwd(), "public", "index.html");
   const document = await readFile(htmlPath, "utf8");

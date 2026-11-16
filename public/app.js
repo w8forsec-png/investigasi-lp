@@ -6,6 +6,7 @@ const state = {
   peopleByTeam: {}, caseDetail: null, openCaseId: null, detailArchived: false,
   detailPages: { profiles: 1, field_reports: 1, technical_entries: 1 }, editor: null
 };
+let caseSearchTimeout;
 
 const roleLabels = { admin: "Pimpinan / Admin", leader: "Kepala Tim", analyst: "Tim Analis", member: "Anggota Tim" };
 const statusClass = status => status === "Selesai" ? "done" : status === "Proses" ? "process" : "active";
@@ -50,6 +51,7 @@ function showApp() {
 }
 
 function resetAccountState() {
+  clearTimeout(caseSearchTimeout);
   state.user = null;
   state.dashboard = null;
   state.cases = [];
@@ -525,7 +527,10 @@ $$("[data-go]").forEach(button => button.addEventListener("click", () => setView
 $("#team-select").addEventListener("change", loadDashboard);
 $("#case-search").addEventListener("input", () => {
   state.casePage = 1;
-  loadCases(1).catch(error => alert(error.message));
+  clearTimeout(caseSearchTimeout);
+  caseSearchTimeout = window.setTimeout(() => {
+    loadCases(1).catch(error => alert(error.message));
+  }, 250);
 });
 $("#case-show-archived").addEventListener("change", event => {
   state.caseShowArchived = event.target.checked;
@@ -693,4 +698,4 @@ async function handleRecordAction(button) {
 
 $("#current-year").textContent = new Date().getFullYear();
 
-api("/api/session").then(loadApp).catch(showLogin);
+loadApp().catch(showLogin);
