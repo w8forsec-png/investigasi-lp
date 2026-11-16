@@ -20,6 +20,7 @@ Aplikasi Next.js untuk deployment di Vercel dengan Supabase Auth dan PostgreSQL.
 6. Siapkan akun admin awal. Atur `CMS_ADMIN_USERNAME`, `CMS_ADMIN_PASSWORD` (minimal 12 karakter), dan `CMS_ADMIN_NAME`, lalu jalankan `npm run bootstrap:admin`. Skrip tidak mempunyai password bawaan.
 
 Supabase Auth memakai alamat internal berbentuk `<username>@cms.invalid`; pengguna tetap masuk melalui nama pengguna pada tampilan aplikasi. Akun personel dibuat dari menu Tim & Personel. Password awal perlu diberikan lewat kanal terpisah.
+Sesi login menggunakan cookie sesi browser, sehingga refresh halaman tidak mengakhiri sesi. Cookie tidak disimpan sebagai cookie permanen dan biasanya dihapus saat sesi browser berakhir.
 
 ## Menjalankan dan deploy
 

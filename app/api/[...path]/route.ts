@@ -63,11 +63,11 @@ async function currentUser() {
     authData = { user: refreshed.user };
     jar.set("cms_access", token, {
       httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production",
-      path: "/", maxAge: refreshed.session.expires_in
+      path: "/"
     });
     jar.set("cms_refresh", refreshed.session.refresh_token, {
       httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production",
-      path: "/", maxAge: 30 * 24 * 60 * 60
+      path: "/"
     });
   }
   const { data, error } = await supabaseAdmin.from("users")
@@ -142,11 +142,11 @@ async function login(request: NextRequest) {
   const response = json({ ok: true });
   response.cookies.set("cms_access", data.session.access_token, {
     httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production",
-    path: "/", maxAge: 8 * 60 * 60
+    path: "/"
   });
   response.cookies.set("cms_refresh", data.session.refresh_token, {
     httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production",
-    path: "/", maxAge: 30 * 24 * 60 * 60
+    path: "/"
   });
   return response;
 }
